@@ -1,0 +1,30 @@
+# Generated data
+data/raw/nvd/
+data/processed/
+data/features/
+
+# SBT / Scala build output
+spark/target/
+project/target/
+project/project/
+spark/project/target/
+spark/project/project/
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+
+# Environment / secrets
+.env
+.env.*
+!.env.example
+
+# IDE
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db
