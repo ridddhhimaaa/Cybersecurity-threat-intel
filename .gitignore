@@ -1,8 +1,10 @@
 # Generated data
+data/
 data/raw/nvd/
 data/raw/cwe/
 data/processed/
 data/features/
+data/aggregated/
 
 # SBT / Scala build output
 spark/target/
@@ -17,10 +19,20 @@ __pycache__/
 .venv/
 venv/
 
+# Node / Frontend
+node_modules/
+dist/
+frontend/node_modules/
+frontend/dist/
+
 # Environment / secrets
 .env
 .env.*
 !.env.example
+*.key
+*.pem
+credentials
+secrets
 
 # IDE
 .vscode/
