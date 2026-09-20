@@ -17,7 +17,7 @@ object CWEEnricher {
   private case class CweReference(cwe_id: String, cwe_name: String, cwe_description: String)
 
   private val RequiredCveColumns = Seq(
-    "cve_id", "published", "last_modified", "description", "cvss_score", "severity",
+    "cve_id", "published", "last_modified", "description", "cvss_version", "cvss_score", "severity",
     "attack_vector", "attack_complexity", "privileges_required", "user_interaction", "scope", "cwe_id"
   )
 

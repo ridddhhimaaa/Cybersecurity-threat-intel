@@ -12,7 +12,9 @@ The job reads `data/processed/cves_enriched.parquet` and never rewrites `cves.pa
 
 The job writes these datasets under `data/aggregated/`:
 
-`severity_summary`, `cvss_summary`, `yearly_trends`, `attack_vector_summary`, `attack_complexity_summary`, `privileges_summary`, `user_interaction_summary`, `scope_summary`, `cwe_analytics`, and `top_vulnerabilities`.
+`severity_summary`, `cvss_summary`, `cvss_version_summary`, `yearly_trends`, `attack_vector_summary`, `attack_complexity_summary`, `privileges_summary`, `user_interaction_summary`, `scope_summary`, `cwe_analytics`, and `top_vulnerabilities`.
+
+`cvss_version_summary` reports the selected normalized metric version using `cvss_version`, `count`, and `percentage_of_total`.
 
 Categorical summaries contain the category, `cve_count`, `average_cvss`, `maximum_cvss`, `minimum_cvss`, and `percentage_of_total`. CVSS summaries contain analytical bands and do not represent an ML prediction. Top vulnerabilities preserve CVE fields and sort by CVSS descending, publication date descending, then CVE ID.
 

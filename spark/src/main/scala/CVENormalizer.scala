@@ -92,6 +92,7 @@ object CVENormalizer {
         optionalColumn(cveSchema, Seq("published"), "cve").cast("timestamp").as("published"),
         optionalColumn(cveSchema, Seq("lastModified"), "cve").cast("timestamp").as("last_modified"),
         englishDescription(cveSchema).as("description"),
+        cvssVersion(cveSchema).as("cvss_version"),
         cvssField(cveSchema, Seq("cvssData", "baseScore")).cast("double").as("cvss_score"),
         cvssSeverity(cveSchema).as("severity"),
         cvssField(cveSchema, Seq("cvssData", "attackVector"), Seq("cvssData", "accessVector")).as("attack_vector"),
@@ -99,6 +100,11 @@ object CVENormalizer {
         cvssField(cveSchema, Seq("cvssData", "privilegesRequired")).as("privileges_required"),
         cvssField(cveSchema, Seq("cvssData", "userInteraction")).as("user_interaction"),
         cvssField(cveSchema, Seq("cvssData", "scope")).as("scope"),
+        cvssMetricField(cveSchema, "cvssMetricV2", Seq("cvssData", "authentication")).as("cvss_v2_authentication"),
+        cvssMetricField(cveSchema, "cvssMetricV2", Seq("userInteractionRequired")).cast("boolean").as("cvss_v2_user_interaction_required"),
+        cvssMetricField(cveSchema, "cvssMetricV2", Seq("obtainAllPrivilege")).cast("boolean").as("cvss_v2_obtain_all_privilege"),
+        cvssMetricField(cveSchema, "cvssMetricV2", Seq("obtainUserPrivilege")).cast("boolean").as("cvss_v2_obtain_user_privilege"),
+        cvssMetricField(cveSchema, "cvssMetricV2", Seq("obtainOtherPrivilege")).cast("boolean").as("cvss_v2_obtain_other_privilege"),
         cweId(cveSchema).as("cwe_id")
       )
       .filter(col("cve_id").isNotNull)
@@ -130,6 +136,33 @@ object CVENormalizer {
     } yield element_at(col(s"cve.${completePath.mkString(".")}"), 1)
 
     coalesceOrNull(candidates)
+  }
+
+  /** Identifies the metric version supplying the normalized CVSS values. */
+  private def cvssVersion(cveSchema: StructType): Column = {
+    val candidates = CvssVersions.flatMap { version =>
+      if (hasField(cveSchema, Seq("metrics", version))) {
+        Some(when(size(col(s"cve.metrics.$version")) > 0, lit(version match {
+          case "cvssMetricV31" => "3.1"
+          case "cvssMetricV30" => "3.0"
+          case "cvssMetricV2" => "2.0"
+        })))
+      } else None
+    }
+    coalesceOrNull(candidates)
+  }
+
+  /** Reads a field from one metric version without substituting another version's semantics. */
+  private def cvssMetricField(cveSchema: StructType, metricVersion: String, path: Seq[String]): Column = {
+    val completePath = Seq("metrics", metricVersion) ++ path
+    if (hasField(cveSchema, completePath)) {
+      when(
+        cvssVersion(cveSchema) === lit("2.0"),
+        element_at(col(s"cve.${completePath.mkString(".")}"), 1)
+      )
+    } else {
+      lit(null).cast("string")
+    }
   }
 
   /** v3 severity is within cvssData; v2 commonly stores it at the metric level. */

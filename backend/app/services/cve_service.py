@@ -80,9 +80,12 @@ def _filtered_cves(
 
 def _records(frame: pd.DataFrame) -> list[dict[str, Any]]:
     columns = [
-        "cve_id", "published", "last_modified", "description", "cvss_score",
+        "cve_id", "published", "last_modified", "description", "cvss_version", "cvss_score",
         "severity", "attack_vector", "attack_complexity", "privileges_required",
-        "user_interaction", "scope", "cwe_id", "cwe_ids", "cwe_count", "cwe_names",
+        "user_interaction", "scope", "cvss_v2_authentication",
+        "cvss_v2_user_interaction_required", "cvss_v2_obtain_all_privilege",
+        "cvss_v2_obtain_user_privilege", "cvss_v2_obtain_other_privilege",
+        "cwe_id", "cwe_ids", "cwe_count", "cwe_names",
     ]
     records = frame[[column for column in columns if column in frame.columns]].to_dict(orient="records")
     return [{key: sanitize_value(value) for key, value in record.items()} for record in records]

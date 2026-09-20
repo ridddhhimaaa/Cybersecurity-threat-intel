@@ -6,7 +6,7 @@ import org.apache.spark.sql.functions._
 /** Builds reusable analytical Parquet datasets from the enriched CVE records. */
 object CVEAggregator {
   private val RequiredColumns = Seq(
-    "cve_id", "published", "description", "cvss_score", "severity", "attack_vector",
+    "cve_id", "published", "description", "cvss_version", "cvss_score", "severity", "attack_vector",
     "attack_complexity", "privileges_required", "user_interaction", "scope", "cwe_id",
     "cwe_ids", "cwe_names"
   )
@@ -37,6 +37,7 @@ object CVEAggregator {
 
       val severitySummary = categoricalSummary(input, "severity", inputCount)
       val cvssSummary = buildCvssSummary(input, inputCount)
+      val cvssVersionSummary = categoricalCountSummary(input, "cvss_version", inputCount)
       val yearlyTrends = input
         .withColumn("year", year(col("published")))
         .withColumn("year_label", when(col("year").isNull, lit("UNKNOWN")).otherwise(col("year").cast("string")))
@@ -66,6 +67,7 @@ object CVEAggregator {
       val outputs = Seq(
         "severity_summary" -> severitySummary,
         "cvss_summary" -> cvssSummary,
+        "cvss_version_summary" -> cvssVersionSummary,
         "yearly_trends" -> yearlyTrends,
         "attack_vector_summary" -> attackVectorSummary,
         "attack_complexity_summary" -> attackComplexitySummary,
@@ -100,7 +102,7 @@ object CVEAggregator {
 
       val reloadedInputCount = spark.read.parquet(inputPath.toUri.toString).count()
       require(reloadedInputCount == inputCount, s"Input changed during aggregation: before=$inputCount, after=$reloadedInputCount")
-      println("All ten aggregation datasets were written and reloaded successfully.")
+      println("All aggregation datasets were written and reloaded successfully.")
       input.unpersist()
     } finally {
       spark.stop()
@@ -163,7 +165,7 @@ object CVEAggregator {
 
   private def validateOutput(name: String, output: DataFrame, inputCount: Long): Unit = {
     val countSum = if (output.columns.contains("cve_count")) output.agg(sum("cve_count")).first().getLong(0) else inputCount
-    val countBearing = Set("severity_summary", "cvss_summary", "attack_vector_summary", "attack_complexity_summary",
+    val countBearing = Set("severity_summary", "cvss_summary", "cvss_version_summary", "attack_vector_summary", "attack_complexity_summary",
       "privileges_summary", "user_interaction_summary", "scope_summary", "cwe_analytics")
     if (countBearing.contains(name)) {
       require(countSum <= inputCount, s"$name count total exceeds input: $countSum > $inputCount")
@@ -173,6 +175,14 @@ object CVEAggregator {
       require(output.filter(col("percentage_of_total") < 0 || col("percentage_of_total") > 100).count() == 0,
         s"$name contains invalid percentages")
     }
+  }
+
+  private def categoricalCountSummary(input: DataFrame, columnName: String, total: Long): DataFrame = {
+    input
+      .groupBy(columnName)
+      .agg(count(lit(1)).as("count"))
+      .withColumn("percentage_of_total", col("count") / lit(total.toDouble) * 100.0)
+      .orderBy(col(columnName).asc_nulls_first)
   }
 
   private def validateSchema(input: DataFrame): Unit = {
